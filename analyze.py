@@ -1,7 +1,7 @@
 import sys, glob, os, re
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 import sklearn.cluster as cluster
 
 flist = []
@@ -17,28 +17,28 @@ atom_count = 0
 data_list = []
 box_size = 0
 #print(flist)
-sns.set_context('poster')
-sns.set_color_codes()
-plot_kwds = {'alpha' : 0.25, 's' : 80, 'linewidths':0}
-def plot_cluster(data, algorithm, args, kwds):
-    labels = algorithm(*args, **kwds).fit_predict(data)
-    palette = sns.color_palette('deep', np.unique(labels).max() + 1) #dunno what this does
-    colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in labels]
-    plt.scatter(data.T[0], data.T[1], c = colors, **plot_kwds)
-    frame = plt.gca()
-    plt.title('Clusters found by {}'.format(str(algorithm.__name__)), fontsize=24)
+#sns.set_context('poster')
+#sns.set_color_codes()
+#plot_kwds = {'alpha' : 0.25, 's' : 80, 'linewidths':0}
+#def plot_cluster(data, algorithm, args, kwds):
+    #labels = algorithm(*args, **kwds).fit_predict(data)
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1) #dunno what this does
+    #colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in labels]
+    #plt.scatter(data.T[0], data.T[1], c = colors, **plot_kwds)
+    #frame = plt.gca()
+    #plt.title('Clusters found by {}'.format(str(algorithm.__name__)), fontsize=24)
 
 def get_box_neighbors(b):
-    neighbors=np.asarray([0,0,0,0,0,0,0,0,0]).reshape(3,3)
+    neighbors=np.asarray([0,0,0,0,0,0,0,0,0])
     pm = [-1,0,1]
-    row_number = np.floor(b/(float(box_num)+0.0001))
+    row_number = np.floor(b/(float(box_num)))
     column_number = b-box_num*row_number
     count = 0
     for i in pm:
         for j in pm:
             neighbors[count] = ((column_number+j)%box_num) + box_num*((row_number+i)%box_num)
             count += 1
-            print(count, neighbors)
+    print(b, neighbors)
     print(np.floor(b/float(box_num)+0.0000001), row_number, column_number)
 
 #for i in range(3):
