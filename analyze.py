@@ -30,9 +30,15 @@ def plot_cluster(data, algorithm, args, kwds):
 
 def get_box_neighbors(b):
     neighbors=np.asarray([0,0,0,0,0,0,0,0,0]).reshape(3,3)
-    row_number = np.floor(b/(float(box_num)))
+    pm = [-1,0,1]
+    row_number = np.floor(b/(float(box_num)+0.0001))
     column_number = b-box_num*row_number
-    
+    count = 0
+    for i in pm:
+        for j in pm:
+            neighbors[count] = ((column_number+j)%box_num) + box_num*((row_number+i)%box_num)
+            count += 1
+            print(count, neighbors)
     print(np.floor(b/float(box_num)+0.0000001), row_number, column_number)
 
 #for i in range(3):
