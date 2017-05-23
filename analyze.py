@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 flist = []
 #for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
 #    flist.append(file)
-flist = ["traj_n20_r0.40_k20.00_c5.00_200.lammpstrj"]
+flist = ["20_frames.lammpstrj"]
 #file = "traj_rho_0.30_k_50.00_eps_2.00.lammpstrj"
 number_flag = 0
 number_of_atoms = 0
