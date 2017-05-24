@@ -16,6 +16,7 @@ box_flag = 0
 atom_count = 0
 data_list = []
 box_size = 0
+rcut_big2 = 5*5
 #print(flist)
 #sns.set_context('poster')
 #sns.set_color_codes()
@@ -81,10 +82,10 @@ for fname in flist:
     bin_size = box_size/float(bin_num)
     print(bin_size)
     frame_count = 0
-    big_particle = np.array([]).reshape(0,2)
-    small_particle = np.array([]).reshape(0,4)
-    small_partition = np.array([])
-    big_partition = np.array([])
+    big_particle = []#np.array([]).reshape(0,2)
+    small_particle = []#np.array([]).reshape(0,4)
+    small_partition = []#np.array([])
+    big_partition = []#np.array([])
     with open(fname) as f:
         for line in f:
             #no_return = line.strip('\n')
@@ -93,22 +94,22 @@ for fname in flist:
                 atom_count = atom_count + 1
                 if int(line_list[1]) == 5:
                     #print(line_list)
-                    xy_big = np.asarray([float(i) for i in line_list[2:-1] ])
+                    xy_big = [float(i) for i in line_list[2:-1] ]
                     #print(big_particle)
-                    big_particle = np.r_[big_particle, [[xy_big[0], xy_big[1] ]] ]
-                    big_partition = np.r_[big_partition, [int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)] ]
+                    big_particle.append([xy_big[0],xy_big[1]])# = np.r_[big_particle, [[xy_big[0], xy_big[1] ]] ]
+                    big_partition.append(int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size))# = np.r_[big_partition, [int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)] ]
                 if int(line_list[1]) == 3:
-                    xy_small = np.asarray([float(i) for i in line_list[2:-1] ])
+                    xy_small = [float(i) for i in line_list[2:-1] ]
                     #get next line 
                     line2 = next(f)
                     atom_count += 1
                     line_list2 = line2.split()
-                    xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
+                    xy_small_dir = [float(i) for i in line_list2[2:-1] ]
                     #get orientation
-                    diff = xy_small_dir - xy_small
-                    diff = diff/(np.hypot(diff[0],diff[1]))#np.sqrt(np.sum(diff*diff)))
-                    small_particle = np.r_[ small_particle,[[xy_small[0], xy_small[1], diff[0], diff[1] ]] ]
-                    small_partition = np.r_[small_partition, [int(xy_small[0]/bin_size) + bin_num*int(xy_small[1]/bin_size)] ]
+                    #diff = xy_small_dir - xy_small
+                    #diff = diff/(np.hypot(diff[0],diff[1]))#np.sqrt(np.sum(diff*diff)))
+                    small_particle.append([xy_small[0], xy_small[1], xy_small_dir[0], xy_small_dir[1]])# = np.r_[ small_particle,[[xy_small[0], xy_small[1], diff[0], diff[1] ]] ]
+                    small_partition.append(int(xy_small[0]/bin_size) + bin_num*int(xy_small[1]/bin_size))
                     #print(np.sqrt(diff[0]*diff[0] + diff[1]*diff[1]), diff[0], diff[1])
             if atom_count == number_of_atoms:
                 data_flag = 0
@@ -130,14 +131,14 @@ for fname in flist:
                         if small_partition[ind_s] in neighbors:
                             #test distance cutoff
                             #print(box,small_partition[ind_s], neighbors)
-                            dist = big - small[:2]
+                            dist = np.asarray(big) - np.asarray(small[:2])
                             pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
-                            r2_test = distx*distx + disty*disty
-                            r2 = pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1]
-#                            if np.hypot(big[0] - small[0], big[1] - small[1]) < rcut_big2:
+                            if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_big2:
                                 #test direction condition
-
-                                
+                                angle = np.math.atan2(np.linalg.det([dist,small[2:]]),np.dot(dist,small[2:]))#arccos(np.clip(np.dot(dist,small[2:])/np.norm(dist)/np.norm(small[2:]),-1,1))
+                                #if angle < np.pi*0.5:
+                                #                                    bound_small = np.r_[bound_small, small]
+                                print(angle*180/3.14159265)
                     #for ind_s,small in enumerate(small_particle):
                         
                 #partition box into smaller boxes, and assign box number to all big and small particles
@@ -152,10 +153,10 @@ for fname in flist:
                 #
                 #
                 #print(frame_count, small_particle,len(big_particle))
-                big_particle = np.array([]).reshape(0,2)
-                small_particle = np.array([]).reshape(0,4)
-                small_partition = np.array([])
-                big_partition = np.array([])
+                big_particle = []#np.array([]).reshape(0,2)
+                small_particle = []#np.array([]).reshape(0,4)
+                small_partition = []#np.array([])
+                big_partition = []#np.array([])
                 print(frame_count)
             #include this to skip first 9 non-data lines in each frame
             if "id" in line_list:
