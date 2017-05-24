@@ -78,7 +78,7 @@ for fname in flist:
             if box_size != 0:
                 break
     print(box_size,number_of_atoms)
-    bin_num = 10
+    bin_num = 15
     bin_size = box_size/float(bin_num)
     print(bin_size)
     frame_count = 0
@@ -105,16 +105,11 @@ for fname in flist:
                     atom_count += 1
                     line_list2 = line2.split()
                     xy_small_dir = [float(i) for i in line_list2[2:-1] ]
-                    #get orientation
-                    #diff = xy_small_dir - xy_small
-                    #diff = diff/(np.hypot(diff[0],diff[1]))#np.sqrt(np.sum(diff*diff)))
                     small_particle.append([xy_small[0], xy_small[1], xy_small_dir[0], xy_small_dir[1]])# = np.r_[ small_particle,[[xy_small[0], xy_small[1], diff[0], diff[1] ]] ]
                     small_partition.append(int(xy_small[0]/bin_size) + bin_num*int(xy_small[1]/bin_size))
-                    #print(np.sqrt(diff[0]*diff[0] + diff[1]*diff[1]), diff[0], diff[1])
             if atom_count == number_of_atoms:
                 data_flag = 0
                 atom_count = 0
-#                print(big_partition)
 #                plt.scatter(small_particle.T[0],small_particle.T[1],s=10.,c=small_partition, cmap = 'flag')#, cmap=matplotlib.colors.ListedColormap(colors)
 #                plt.scatter(big_particle.T[0],big_particle.T[1],s=100,c=big_partition, cmap = 'flag')
 #                if frame_count%10 == 0:
@@ -124,22 +119,20 @@ for fname in flist:
                 # 
                 #analyze data here:
                 #distance matrix:
+                bound_small = []
                 for ind_b,big in enumerate(big_particle):
                     box = big_partition[ind_b]
                     neighbors = get_box_neighbors(box)
                     for ind_s,small in enumerate(small_particle):
                         if small_partition[ind_s] in neighbors:
                             #test distance cutoff
-                            #print(box,small_partition[ind_s], neighbors)
                             dist = np.asarray(big) - np.asarray(small[:2])
                             pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
                             if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_big2:
                                 #test direction condition
                                 angle = np.math.atan2(np.linalg.det([dist,small[2:]]),np.dot(dist,small[2:]))#arccos(np.clip(np.dot(dist,small[2:])/np.norm(dist)/np.norm(small[2:]),-1,1))
-                                #if angle < np.pi*0.5:
-                                #                                    bound_small = np.r_[bound_small, small]
-                                print(angle*180/3.14159265)
-                    #for ind_s,small in enumerate(small_particle):
+                                if angle < np.pi*0.5:
+                                    bound_small.append([small,ind_s])
                         
                 #partition box into smaller boxes, and assign box number to all big and small particles
                 #for each big particle, 
