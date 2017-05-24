@@ -31,27 +31,23 @@ box_size = 0
 def get_box_neighbors(b):
     neighbors=np.asarray([0,0,0,0,0,0,0,0,0])
     pm = [-1,0,1]
-    row_number = np.floor(b/(float(box_num)))
-    column_number = b-box_num*row_number
+    row_number = np.floor(b/(float(bin_num)))
+    column_number = b-bin_num*row_number
     count = 0
     for i in pm:
         for j in pm:
-            neighbors[count] = ((column_number+j)%box_num) + box_num*((row_number+i)%box_num)
+            neighbors[count] = ((column_number+j)%bin_num) + bin_num*((row_number+i)%bin_num)
             count += 1
-    print(b, neighbors)
-    print(np.floor(b/float(box_num)+0.0000001), row_number, column_number)
-
-#for i in range(3):
-#for j in range(3):
-#neighbors[i][j] = int(box/box_num)*box_num
-
+    return neighbors
+#    print(b, neighbors, neighbors_test)
+#    print(np.floor(b/float(bin_num)+0.0000001), row_number, column_number)
 
 
 #test_box_neighbors:
-box_num = 4
-for i in range(box_num*box_num):
-    get_box_neighbors(i)
-sys.exit()
+#bin_num = 4
+#for i in range(bin_num*bin_num):
+#    get_box_neighbors(i)
+#sys.exit()
 
 #read in init info
 for fname in flist:
@@ -83,6 +79,7 @@ for fname in flist:
     print(box_size,number_of_atoms)
     bin_num = 10
     bin_size = box_size/float(bin_num)
+    print(bin_size)
     frame_count = 0
     big_particle = np.array([]).reshape(0,2)
     small_particle = np.array([]).reshape(0,4)
@@ -116,19 +113,31 @@ for fname in flist:
             if atom_count == number_of_atoms:
                 data_flag = 0
                 atom_count = 0
-                print(big_partition)
-                plt.scatter(small_particle.T[0],small_particle.T[1],s=10.,c=small_partition, cmap = 'flag')#, cmap=matplotlib.colors.ListedColormap(colors)
-                plt.scatter(big_particle.T[0],big_particle.T[1],s=100,c=big_partition, cmap = 'flag')
-                if frame_count%10 == 0:
-                    plt.show()
+#                print(big_partition)
+#                plt.scatter(small_particle.T[0],small_particle.T[1],s=10.,c=small_partition, cmap = 'flag')#, cmap=matplotlib.colors.ListedColormap(colors)
+#                plt.scatter(big_particle.T[0],big_particle.T[1],s=100,c=big_partition, cmap = 'flag')
+#                if frame_count%10 == 0:
+#                    plt.show()
                 #sys.exit()
                 #
                 # 
                 #analyze data here:
                 #distance matrix:
-                #for ind_b,big in enumerate(big_particle):
-                    #box = big_partition[ind_b]
-                    #get_box_neighbors(box)
+                for ind_b,big in enumerate(big_particle):
+                    box = big_partition[ind_b]
+                    neighbors = get_box_neighbors(box)
+                    for ind_s,small in enumerate(small_particle):
+                        if small_partition[ind_s] in neighbors:
+                            #test distance cutoff
+                            #print(box,small_partition[ind_s], neighbors)
+                            dist = big - small[:2]
+                            pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
+                            r2_test = distx*distx + disty*disty
+                            r2 = pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1]
+#                            if np.hypot(big[0] - small[0], big[1] - small[1]) < rcut_big2:
+                                #test direction condition
+
+                                
                     #for ind_s,small in enumerate(small_particle):
                         
                 #partition box into smaller boxes, and assign box number to all big and small particles
