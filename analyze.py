@@ -117,11 +117,6 @@ for fname in flist:
                     line2 = next(f)
                     atom_count += 1
                     line_list2 = line2.split()
-<<<<<<< HEAD
-                    xy_small_dir = [float(i) for i in line_list2[2:-1] ]
-                    small_particle.append([xy_small[0], xy_small[1], xy_small_dir[0], xy_small_dir[1]])# = np.r_[ small_particle,[[xy_small[0], xy_small[1], diff[0], diff[1] ]] ]
-                    small_partition.append(int(xy_small[0]/bin_size) + bin_num*int(xy_small[1]/bin_size))
-=======
                     xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
                     xy_small_dir += -box_size*(xy_small_dir >= box_size) + box_size * (xy_small_dir <= 0.)
                     #get orientation
@@ -134,7 +129,6 @@ for fname in flist:
                         print(pbin, xy_small, 'huh')
                     small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1] ])
                     small_ind += 1
->>>>>>> 27352a9e2fbaeecb7a4bc07f8f97dd36bb032410
             if atom_count == number_of_atoms:
                 data_flag = 0
                 atom_count = 0
@@ -147,22 +141,6 @@ for fname in flist:
                 # 
                 #analyze data here:
                 #distance matrix:
-<<<<<<< HEAD
-                bound_small = []
-                for ind_b,big in enumerate(big_particle):
-                    box = big_partition[ind_b]
-                    neighbors = get_box_neighbors(box)
-                    for ind_s,small in enumerate(small_particle):
-                        if small_partition[ind_s] in neighbors:
-                            #test distance cutoff
-                            dist = np.asarray(big) - np.asarray(small[:2])
-                            pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
-                            if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_big2:
-                                #test direction condition
-                                angle = np.math.atan2(np.linalg.det([dist,small[2:]]),np.dot(dist,small[2:]))#arccos(np.clip(np.dot(dist,small[2:])/np.norm(dist)/np.norm(small[2:]),-1,1))
-                                if angle < np.pi*0.5:
-                                    bound_small.append([small,ind_s])
-=======
                 cmat = np.zeros((small_ind + big_ind)*(small_ind + big_ind)).reshape(small_ind + big_ind, small_ind + big_ind)
                 for box in range(bin_num*bin_num):
                     #print(big_particle[box])
@@ -217,7 +195,6 @@ for fname in flist:
                 #DBSCAN(min_samples = 1).fit_predict(cmat)
                                     #print(bpart[0], spart[0], angle*180/3.14159265)
                     #for ind_s,small in enumerate(small_particle):
->>>>>>> 27352a9e2fbaeecb7a4bc07f8f97dd36bb032410
                         
                 #partition box into smaller boxes, and assign box number to all big and small particles
                 #for each big particle, 
