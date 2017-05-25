@@ -8,7 +8,7 @@ flist = []
 #for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
 #    flist.append(file)
 flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
-#"20_frames.lammpstrj"
+flist = ["20_frames.lammpstrj"]
 #file = "traj_rho_0.30_k_50.00_eps_2.00.lammpstrj"
 number_flag = 0
 number_of_atoms = 0
@@ -182,9 +182,9 @@ for fname in flist:
                 for idx,i in enumerate(T_cmat_ones):
                     in_cluster = []
                     in_cluster.append(i[0])
-                    next_indices = np.where(cmat_ones[0] == i[1])
+                    next_indices = np.where(T_cmat_ones[0] == i[1])
                     
-                    print(idx, i, in_cluster, next_indices)
+                    #print(idx, i, in_cluster, next_indices)
                     #walk_through_cluster(i)
                     #cluster.append(walk_through_cluster)
                 #def walk_through_cluster(i):
@@ -218,30 +218,4 @@ for fname in flist:
                 data_flag = 1
                 atom_count = 0
                 frame_count = frame_count + 1
-                #print(number_of_atoms)
-                #        print(data_list)
         sys.exit()
-    dmat_t4 = np.delete(np.delete(dmat_t4.astype(float)/float(frame_count),-1,0),-1,1)
-    dmat_t2 = np.delete(np.delete(dmat_t2.astype(float)/float(frame_count),-1,0),-1,1)
-    print(dmat_t2, dmat_t4)
-    global_max = max(np.amax(dmat_t2),np.amax(dmat_t4))
-    global_min = min(np.amax(dmat_t2),np.amax(dmat_t4))
-    fig = plt.figure()
-    ax = fig.add_subplot(1,2,1)
-    ax.set_aspect('equal')
-    im = ax.imshow(dmat_t2, vmin = 0, vmax = global_max)
-    #plt.colorbar()
-    ax = fig.add_subplot(1,2,2)
-    ax.set_aspect('equal')
-    im = ax.imshow(dmat_t4,vmin = 0, vmax = global_max)
-    #plt.colorbar()
-    #ax = fig.add_subplot(1,3,3)
-    #ax.set_aspect('equal')
-    #im = ax.imshow(dmat_t2 + dmat_t4,vmin = 0, vmax = global_max)
-    #plt.colorbar()
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig.colorbar(im, cax=cbar_ax, cmap = 'Greys')
-    #plt.show()
-    dens_name = fname.replace("traj","dens")
-    plt.savefig(dens_name.replace(".lammpstrj",".png"))
