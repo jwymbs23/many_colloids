@@ -1,13 +1,14 @@
 import sys, glob, os, re
 import numpy as np
 import matplotlib.pyplot as plt
-#import seaborn as sns
-from sklearn.cluster import DBSCAN
-import pprint
+import seaborn as sns
+from operator import itemgetter
+
 flist = []
 #for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
 #    flist.append(file)
-flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
+#flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
+
 flist = ["20_frames.lammpstrj"]
 #file = "traj_rho_0.30_k_50.00_eps_2.00.lammpstrj"
 number_flag = 0
@@ -17,8 +18,9 @@ box_flag = 0
 atom_count = 0
 data_list = []
 box_size = 0
-rcut_big2 = 5*5
-rcut_small2 = 1.1*1.1
+rcut_big2 = 1.1*(10*1.12246+1.1226)*(10*1.12246+1.1226)*0.25
+rcut_small2 = 1.1*1.12246*1.12246
+acut = np.cos(0.3*np.pi)
 #print(flist)
 #sns.set_context('poster')
 #sns.set_color_codes()
@@ -80,8 +82,11 @@ for fname in flist:
             if box_size != 0:
                 break
     print(box_size,number_of_atoms)
-    bin_num = 15
+    bin_size = 12.0
+    bin_num = int(box_size/bin_size)
     bin_size = box_size/float(bin_num)
+#    bin_num = 15
+#    bin_size = box_size/float(bin_num)
     print(bin_size)
     frame_count = 0
     big_particle = [ [] for i in range(bin_num*bin_num)]
@@ -130,84 +135,114 @@ for fname in flist:
                     small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1] ])
                     small_ind += 1
             if atom_count == number_of_atoms:
+                nbig = big_ind
+                nsmall = small_ind
+                print(nbig,nsmall)
                 data_flag = 0
                 atom_count = 0
-#                plt.scatter(small_particle.T[0],small_particle.T[1],s=10.,c=small_partition, cmap = 'flag')#, cmap=matplotlib.colors.ListedColormap(colors)
-#                plt.scatter(big_particle.T[0],big_particle.T[1],s=100,c=big_partition, cmap = 'flag')
-#                if frame_count%10 == 0:
-#                    plt.show()
+                #                print(big_partition)
+                #plt.scatter(small_particle.T[0],small_particle.T[1],s=10.,c=small_partition, cmap = 'flag')#, cmap=matplotlib.colors.ListedColormap(colors)
+                #                plt.scatter(big_particle.T[0],big_particle.T[1],s=100,c=big_partition, cmap = 'flag')
+                #                if frame_count%10 == 0:
+                #plt.show()
                 #sys.exit()
                 #
                 # 
                 #analyze data here:
                 #distance matrix:
-                cmat = np.zeros((small_ind + big_ind)*(small_ind + big_ind)).reshape(small_ind + big_ind, small_ind + big_ind)
-                for box in range(bin_num*bin_num):
-                    #print(big_particle[box])
-                    neighbors = get_box_neighbors(box)
-                    for is1, spart in enumerate(small_particle[box]):
-                        for nbox in neighbors:
-                            #loop over big particles
-                            spartarray = np.asarray(spart[1:3])
-                            for bpart in big_particle[nbox]:
-                                #test distance cutoff
-                                dist = np.asarray(bpart[1:]) - spartarray
-                                pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
-                                if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_big2:
-                                    #test direction condition
-                                    angle = np.arccos(np.dot(pbc_dist,spart[3:])/(np.linalg.norm(pbc_dist)))
-                                    #print('big', angle)
-                                    if angle < np.pi*0.5:
-                                        cmat[bpart[0]][big_ind + spart[0]] = 1
-                                        cmat[big_ind + spart[0]][bpart[0]] = 1
-                                        
-                            #loop over other small particles
-                            for is2, spart2 in enumerate(small_particle[nbox]):
-                                if(is2 > is1):
-                                    dist = np.asarray(spart2[1:3]) - spartarray
+                if not frame_count%20:
+                    cmat = np.zeros((nsmall + nbig)*(nsmall + nbig)).reshape(nsmall + nbig, nsmall + nbig)
+                    for box in range(bin_num*bin_num):
+                        #print(big_particle[box])
+                        neighbors = get_box_neighbors(box)
+                        for is1, spart in enumerate(small_particle[box]):
+                            for nbox in neighbors:
+                                #loop over big particles
+                                spartarray = np.asarray(spart[1:3])
+                                for bpart in big_particle[nbox]:
+                                    #test distance cutoff
+                                    dist = np.asarray(bpart[1:]) - spartarray
                                     pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
-                                    if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_small2:
+                                    if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_big2:
                                         #test direction condition
-                                        angle = np.arccos(np.clip(np.dot(spart2[3:],spart[3:]),-1,1))
-                                        #print('small', angle)
-                                        if angle < np.pi*0.5:
-                                            cmat[big_ind + spart2[0]][big_ind + spart[0]] = 1
-                                            cmat[big_ind + spart[0]][big_ind + spart2[0]] = 1
-                #end of contact matrix construction
-                cmat_ones = np.nonzero(cmat)
-                T_cmat_ones = np.transpose(cmat_ones)
-                #print(cmat_ones)
-                cluster = []
-                print(cmat_ones[0])
-                for idx,i in enumerate(T_cmat_ones):
-                    in_cluster = []
-                    in_cluster.append(i[0])
-                    next_indices = np.where(T_cmat_ones[0] == i[1])
-                    
-                    #print(idx, i, in_cluster, next_indices)
-                    #walk_through_cluster(i)
-                    #cluster.append(walk_through_cluster)
-                #def walk_through_cluster(i):
-                    #in_cluster.append(i[1])
-                    #walk_through_cluster(i[1])
-                #for i in cmat_ones[0]:
-                #    if 
-                #DBSCAN(min_samples = 1).fit_predict(cmat)
-                                    #print(bpart[0], spart[0], angle*180/3.14159265)
-                    #for ind_s,small in enumerate(small_particle):
-                        
-                #partition box into smaller boxes, and assign box number to all big and small particles
-                #for each big particle, 
-                if frame_count == 100:
-                    #plt.scatter(small_particle.T[0], small_particle.T[1])
-                    #plt.show()
-                    plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
-                    plt.show()
-                    sys.exit()
+                                        cosangle = np.dot(pbc_dist,spart[3:])/(np.linalg.norm(pbc_dist))
+                                        #print('big', angle)
+                                        if abs(cosangle)-1 < acut:
+                                            cmat[bpart[0]][nbig + spart[0]] = 1
+                                            cmat[nbig + spart[0]][bpart[0]] = 1
+                                            
+                                #loop over other small particles
+                                for is2, spart2 in enumerate(small_particle[nbox]):
+                                    if(is2 > is1):
+                                        dist = np.asarray(spart2[1:3]) - spartarray
+                                        pbc_dist = [i - float(int(i/(0.5*box_size)))*box_size for i in dist]
+                                        if pbc_dist[0]*pbc_dist[0] + pbc_dist[1]*pbc_dist[1] < rcut_small2:
+                                            #test direction condition
+                                            cosangle = (np.clip(np.dot(spart2[3:],spart[3:]),-1,1))
+                                            #print('small', angle)
+                                            if abs(cosangle)-1 < acut:
+                                                cmat[nbig + spart2[0]][nbig + spart[0]] = 1
+                                                cmat[nbig + spart[0]][nbig + spart2[0]] = 1
+                    #end of contact matrix construction
+                    #cmat = [[0,1,0,0,0],[1,0,1,0,0],[0,1,0,0,0],[0,0,0,0,1],[0,0,0,1,0]]
+                    #print(cmat)
+                    cmat_ones = np.nonzero(cmat)
+                    T_cmat_ones = np.transpose(cmat_ones)
+                    #print(cmat_ones)
+                    cluster = []
+                    cluster_check = []
+                    #print(cmat_ones[0])
+                    for idx,i in enumerate(T_cmat_ones):
+                        next_list = []
+                        if i[0] not in cluster_check:
+                            cluster_check.append(i[0])
+                            next_list.append(idx)
+                            #start new cluster
+                            #indices of cmat_ones where there is a particle in the cluster
+                            #print(next_list, cmat_ones[1][next_list[0]])
+                            for j in next_list:
+                                #print(j)
+                                test = cmat_ones[1][j]
+                                #print(test)
+                                next_indices = np.where(cmat_ones[0] == test)
+                                #print(next_indices[0].tolist())
+                                for k in next_indices[0].tolist():
+                                    if not k in next_list:
+                                        next_list.append(k)
+                                        cluster_check.append(cmat_ones[0][k])
+                                #print(next_list)
+                                #sys.exit()
+                                #print(next_list)
+                            cluster.append(list(set([cmat_ones[0][i] for i in next_list])))
+                    #done with cluster creation
+                    #cluster is a list of lists where each sublist corresponds to a different cluster, and contains all the particles in that cluster with (big+small) index structure
+                    #particle_cluster is an list where i[x] corresponds to the cluster i that contains particle with index x
+                    p_in_cluster = np.zeros(nbig+nsmall).astype(int)
+                    for idx,i in enumerate(cluster):
+                        print([nbig + (j-nbig)*(j<nbig+1) + (j*4+1)*(j>=nbig) + 1 for j in i] )
+                        #sys.exit()
+                        for j in i:
+                            #print(i,idx,j)
+                            p_in_cluster[j] = idx+1
+#                    print(p_in_cluster)
+                    #print(next_list, cluster)
+                    #DBSCAN(min_samples = 1).fit_predict(cmat)
+                    if frame_count == 100:
+                        #unbox particles:
+                        big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
+                        small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
+                        #                       print(np.asarray(big_plot), np.asarray(small_plot)[:,0:3])
+                        full_plot = np.vstack((np.asarray(big_plot), np.asarray(small_plot)[:,0:3]))
+                        #                        print(full_plot)
+                        palette = sns.color_palette('deep', np.unique(p_in_cluster).max() + 1) 
+                        colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in p_in_cluster]
+                        plt.scatter(np.asarray(full_plot).T[1], np.asarray(full_plot).T[2],c=colors)
+                        #plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
+                        plt.show()
+                        #sys.exit()
                 #
                 #
                 #
-                #print(frame_count, small_particle,len(big_particle))
                 big_particle = [[] for i in range(bin_num*bin_num)]
                 small_particle = [[] for i in range(bin_num*bin_num)]
                 small_ind = 0
