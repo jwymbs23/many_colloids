@@ -16,7 +16,6 @@ number_of_atoms = 0
 data_flag = 0
 box_flag = 0
 atom_count = 0
-data_list = []
 box_size = 0
 rcut_big2 = 1.1*(10*1.12246+1.1226)*(10*1.12246+1.1226)*0.25
 rcut_small2 = 1.1*1.12246*1.12246
@@ -62,8 +61,8 @@ for fname in flist:
     data_flag = 0
     box_flag = 0
     atom_count = 0
-    data_list = []
     box_size = 0
+    save_size_dist = []
     #read_in_file
     with open(fname) as f:
         for line in f:
@@ -100,40 +99,53 @@ for fname in flist:
     big_partition = []#np.array([])
     small_ind = 0
     big_ind = 0
+    particle_index = []
     with open(fname) as f:
         for line in f:
             #no_return = line.strip('\n')
             line_list = line.split()
             if data_flag == 1:
-                atom_count = atom_count + 1
-                if int(line_list[1]) == 5:
-                    #print(line_list)
-                    xy_big = np.asarray([float(i) for i in line_list[2:-1] ])
-                    #print(big_particle)
-                    xy_big += -box_size*(xy_big >= box_size) + box_size * (xy_big <= 0.)
-                    pbin = int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)
-                    big_particle[pbin].append([ big_ind,xy_big[0],xy_big[1] ])
-                    big_ind += 1
-                    #big_partition.append(int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size))
-                if int(line_list[1]) == 3:
-                    xy_small = np.asarray([float(i) for i in line_list[2:-1] ])
-                    xy_small += - box_size*(xy_small >= box_size) + box_size * (xy_small <= 0.)
-                    #get next line 
-                    line2 = next(f)
-                    atom_count += 1
-                    line_list2 = line2.split()
-                    xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
-                    xy_small_dir += -box_size*(xy_small_dir >= box_size) + box_size * (xy_small_dir <= 0.)
-                    #get orientation
-                    diff = xy_small_dir - xy_small
-                    pbc_diff = [i - float(int(i/(0.5*box_size)))*box_size for i in diff]
-                    
-                    pbc_diff = pbc_diff/(np.hypot(pbc_diff[0],pbc_diff[1]))#np.sqrt(np.sum(diff*diff)))
-                    pbin = int(xy_small[0]/(bin_size)) + bin_num*int(xy_small[1]/(bin_size))
-                    if(pbin > bin_num*bin_num):
-                        print(pbin, xy_small, 'huh')
-                    small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1] ])
-                    small_ind += 1
+                if not "ITEM:" in line_list:
+                    atom_count = atom_count + 1
+                    if int(line_list[1]) == 5:
+                        #print(line_list)
+                        xy_big = np.asarray([float(i) for i in line_list[2:-1] ])
+                        #print(big_particle)
+                        xy_big += -box_size*(xy_big >= box_size) + box_size * (xy_big <= 0.)
+                        pbin = int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)
+                        big_particle[pbin].append([ big_ind,xy_big[0],xy_big[1]])
+                        particle_index.append(atom_count)
+                        big_ind += 1
+                        #big_partition.append(int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size))
+                    if int(line_list[1]) == 3:
+                        xy_small = np.asarray([float(i) for i in line_list[2:-1] ])
+                        xy_small += - box_size*(xy_small >= box_size) + box_size * (xy_small <= 0.)
+                        #get next line 
+                        line2 = next(f)
+                        atom_count += 1
+                        line_list2 = line2.split()
+                        xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
+                        xy_small_dir += -box_size*(xy_small_dir >= box_size) + box_size * (xy_small_dir <= 0.)
+                        #get orientation
+                        diff = xy_small_dir - xy_small
+                        pbc_diff = [i - float(int(i/(0.5*box_size)))*box_size for i in diff]
+                        pbc_diff = pbc_diff/(np.hypot(pbc_diff[0],pbc_diff[1]))#np.sqrt(np.sum(diff*diff)))
+                        pbin = int(xy_small[0]/(bin_size)) + bin_num*int(xy_small[1]/(bin_size))
+                        if(pbin > bin_num*bin_num):
+                            print(pbin, xy_small, 'huh')
+                        small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1]])
+                        particle_index.append(atom_count)
+                        small_ind += 1
+                else:
+                    #incomplete_frame: either corrupt data, or end of file
+                    print('hi')
+                    data_flag = 0
+                    atom_count = 0
+                    big_particle = [[] for i in range(bin_num*bin_num)]
+                    small_particle = [[] for i in range(bin_num*bin_num)]
+                    small_ind = 0
+                    big_ind = 0
+                    particle_index = []
             if atom_count == number_of_atoms:
                 nbig = big_ind
                 nsmall = small_ind
@@ -166,7 +178,7 @@ for fname in flist:
                                         #test direction condition
                                         cosangle = np.dot(pbc_dist,spart[3:])/(np.linalg.norm(pbc_dist))
                                         #print('big', angle)
-                                        if abs(cosangle)-1 < acut:
+                                        if abs(cosangle-1) < acut:
                                             cmat[bpart[0]][nbig + spart[0]] = 1
                                             cmat[nbig + spart[0]][bpart[0]] = 1
                                             
@@ -179,7 +191,7 @@ for fname in flist:
                                             #test direction condition
                                             cosangle = (np.clip(np.dot(spart2[3:],spart[3:]),-1,1))
                                             #print('small', angle)
-                                            if abs(cosangle)-1 < acut:
+                                            if abs(cosangle-1) < acut:
                                                 cmat[nbig + spart2[0]][nbig + spart[0]] = 1
                                                 cmat[nbig + spart[0]][nbig + spart2[0]] = 1
                     #end of contact matrix construction
@@ -219,15 +231,21 @@ for fname in flist:
                     p_in_cluster = np.zeros(nbig+nsmall).astype(int)
                     csize = np.zeros(200).astype(int)
                     for idx,i in enumerate(cluster):
-                        print(i, np.where(np.asarray(i)<200))
-#                        csize[i[np.where(np.asarray(i) < 200)]] = len(i)
-#                        print(csize,len(i))
-#                        print([nbig + (j-nbig)*(j<nbig+1) + (j*4+1)*(j>=nbig) + 1 for j in i] )
-                        #sys.exit()
+                        #print([particle_index[j]-1 for j in i])
                         for j in i:
                             #print(i,idx,j)
-                            p_in_cluster[j] = idx+1
-#                    print(p_in_cluster)
+                            p_in_cluster[j] = idx + 1
+                    n_part_on_big = []
+                    for i in range(big_ind):
+                        if p_in_cluster[i] != 0:
+                            n_part_on_big.append(p_in_cluster.tolist().count(p_in_cluster[i])-1)
+                        else:
+                            n_part_on_big.append(0)
+                    save_size_dist.append(n_part_on_big)
+                    plt.hist(n_part_on_big)
+                    plt.show()
+                    #print(n_part_on_big)
+                    #print(p_in_cluster)
                     #print(next_list, cluster)
                     #DBSCAN(min_samples = 1).fit_predict(cmat)
                     if frame_count == 20:
@@ -250,6 +268,7 @@ for fname in flist:
                 small_particle = [[] for i in range(bin_num*bin_num)]
                 small_ind = 0
                 big_ind = 0
+                particle_index = []
                 print(frame_count)
             #include this to skip first 9 non-data lines in each frame
             if "id" in line_list:
