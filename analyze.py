@@ -1,16 +1,15 @@
 import sys, glob, os, re
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 from operator import itemgetter
+import pickle
 
 flist = []
 #for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
 #    flist.append(file)
-#flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
-
-flist = ["20_frames.lammpstrj"]
-#file = "traj_rho_0.30_k_50.00_eps_2.00.lammpstrj"
+flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
+#flist = ["20_frames.lammpstrj"]
 number_flag = 0
 number_of_atoms = 0
 data_flag = 0
@@ -56,13 +55,14 @@ def get_box_neighbors(b):
 #read in init info
 for fname in flist:
     print(fname)
+    out = open("tail_dist"+fname[4:-10]+".dat", "w")
+    print("tail_dist"+fname[4:-10]+".dat")
     number_flag = 0
     number_of_atoms = 0
     data_flag = 0
     box_flag = 0
     atom_count = 0
     box_size = 0
-    save_size_dist = []
     #read_in_file
     with open(fname) as f:
         for line in f:
@@ -84,23 +84,19 @@ for fname in flist:
     bin_size = 12.0
     bin_num = int(box_size/bin_size)
     bin_size = box_size/float(bin_num)
-#    bin_num = 15
-#    bin_size = box_size/float(bin_num)
-    print(bin_size)
+    #    bin_num = 15
+    #    bin_size = box_size/float(bin_num)
+    #    print(bin_size)
     frame_count = 0
     big_particle = [ [] for i in range(bin_num*bin_num)]
-    #big_particle[0].append([1,2,3])
-    #print(big_particle)
-    #print(big_particle[0])
-    #sys.exit()
     small_particle = [ [] for i in range(bin_num*bin_num)]
-    #np.array([]).reshape(0,4)
-    small_partition = []#np.array([])
-    big_partition = []#np.array([])
+    small_partition = []
+    big_partition = []
     small_ind = 0
     big_ind = 0
     particle_index = []
     frame_time_list = []
+    save_size_dist = []
     t_flag = 0
     with open(fname) as f:
         for line in f:
@@ -109,7 +105,6 @@ for fname in flist:
             if t_flag == 1:
                 frame_time = line_list[0]
                 t_flag = 0
-                print(frame_time)
             if "TIMESTEP" in line_list:
                 t_flag = 1
             if data_flag == 1:
@@ -157,7 +152,6 @@ for fname in flist:
             if atom_count == number_of_atoms:
                 frame_count = frame_count + 1
                 frame_time_list.append(frame_time)
-                print(frame_time_list)
                 nbig = big_ind
                 nsmall = small_ind
                 data_flag = 0
@@ -172,7 +166,7 @@ for fname in flist:
                 # 
                 #analyze data here:
                 #distance matrix:
-                if not frame_count%20:
+                if not frame_count%5:
                     cmat = np.zeros((nsmall + nbig)*(nsmall + nbig)).reshape(nsmall + nbig, nsmall + nbig)
                     for box in range(bin_num*bin_num):
                         #print(big_particle[box])
@@ -253,25 +247,29 @@ for fname in flist:
                         else:
                             n_part_on_big.append(0)
                     save_size_dist.append(n_part_on_big)
-                    plt.hist(n_part_on_big)
-                    plt.show()
+                    out.write(str(frame_time_list[frame_count - 1]) + " ")
+                    for i in save_size_dist:
+                        out.write(str(i))
+                    out.write("\n")
+                    #plt.hist(n_part_on_big)
+                    #plt.show()
                     #print(n_part_on_big)
                     #print(p_in_cluster)
                     #print(next_list, cluster)
                     #DBSCAN(min_samples = 1).fit_predict(cmat)
-                    if frame_count == 20:
-                        #unbox particles:
-                        big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
-                        small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
-                        #                       print(np.asarray(big_plot), np.asarray(small_plot)[:,0:3])
-                        full_plot = np.vstack((np.asarray(big_plot), np.asarray(small_plot)[:,0:3]))
-                        #                        print(full_plot)
-                        palette = sns.color_palette('deep', np.unique(p_in_cluster).max() + 1) 
-                        colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in p_in_cluster]
-                        plt.scatter(np.asarray(full_plot).T[1], np.asarray(full_plot).T[2],c=colors)
-                        #plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
-                        plt.show()
-                        #sys.exit()
+                    #if frame_count == 20:
+                    #    #unbox particles:
+                    #    big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
+                    #    small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
+                    #    #                       print(np.asarray(big_plot), np.asarray(small_plot)[:,0:3])
+                    #    full_plot = np.vstack((np.asarray(big_plot), np.asarray(small_plot)[:,0:3]))
+                    #    #                        print(full_plot)
+                    #    palette = sns.color_palette('deep', np.unique(p_in_cluster).max() + 1) 
+                    #    colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in p_in_cluster]
+                    #    plt.scatter(np.asarray(full_plot).T[1], np.asarray(full_plot).T[2],c=colors)
+                    #    #plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
+                    #    plt.show()
+                    #    #sys.exit()
                 #
                 #
                 #
@@ -280,6 +278,7 @@ for fname in flist:
                 small_ind = 0
                 big_ind = 0
                 particle_index = []
+                save_size_dist = []
                 print(frame_count)
             #include this to skip first 9 non-data lines in each frame
             if "id" in line_list:
