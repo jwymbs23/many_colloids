@@ -1,16 +1,15 @@
 import sys, glob, os, re
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 from operator import itemgetter
+import pickle
 
 flist = []
-#for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
-#    flist.append(file)
-flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
-#flist = ["test.lammpstrj"]
-#"20_frames.lammpstrj"
-#file = "traj_rho_0.30_k_50.00_eps_2.00.lammpstrj"
+for file in glob.glob("traj_n*.lammpstrj"):
+    flist.append(file)
+#flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
+#flist = ["20_frames.lammpstrj"]
 number_flag = 0
 number_of_atoms = 0
 data_flag = 0
@@ -19,7 +18,7 @@ atom_count = 0
 box_size = 0
 rcut_big2 = 1.1*(10*1.12246+1.1226)*(10*1.12246+1.1226)*0.25
 rcut_small2 = 1.1*1.12246*1.12246
-acut = np.cos(0.3*np.pi)
+acut = np.cos(0.2*np.pi)
 #print(flist)
 #sns.set_context('poster')
 #sns.set_color_codes()
@@ -56,13 +55,14 @@ def get_box_neighbors(b):
 #read in init info
 for fname in flist:
     print(fname)
+    out = open("tail_dist"+fname[4:-10]+".dat", "w")
+    print("tail_dist"+fname[4:-10]+".dat")
     number_flag = 0
     number_of_atoms = 0
     data_flag = 0
     box_flag = 0
     atom_count = 0
     box_size = 0
-    save_size_dist = []
     #read_in_file
     with open(fname) as f:
         for line in f:
@@ -84,58 +84,74 @@ for fname in flist:
     bin_size = 12.0
     bin_num = int(box_size/bin_size)
     bin_size = box_size/float(bin_num)
-#    bin_num = 15
-#    bin_size = box_size/float(bin_num)
-    print(bin_size)
+    #    bin_num = 15
+    #    bin_size = box_size/float(bin_num)
+    #    print(bin_size)
     frame_count = 0
     big_particle = [ [] for i in range(bin_num*bin_num)]
-    #big_particle[0].append([1,2,3])
-    #print(big_particle)
-    #print(big_particle[0])
-    #sys.exit()
     small_particle = [ [] for i in range(bin_num*bin_num)]
-    #np.array([]).reshape(0,4)
-    small_partition = []#np.array([])
-    big_partition = []#np.array([])
+    small_partition = []
+    big_partition = []
     small_ind = 0
     big_ind = 0
     particle_index = []
+    frame_time_list = []
+    save_size_dist = []
+    t_flag = 0
     with open(fname) as f:
         for line in f:
             #no_return = line.strip('\n')
             line_list = line.split()
+            if t_flag == 1:
+                frame_time = line_list[0]
+                t_flag = 0
+            if "TIMESTEP" in line_list:
+                t_flag = 1
             if data_flag == 1:
-                atom_count = atom_count + 1
-                if int(line_list[1]) == 5:
-                    #print(line_list)
-                    xy_big = np.asarray([float(i) for i in line_list[2:-1] ])
-                    #print(big_particle)
-                    xy_big += -box_size*(xy_big >= box_size) + box_size * (xy_big <= 0.)
-                    pbin = int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)
-                    big_particle[pbin].append([ big_ind,xy_big[0],xy_big[1]])
-                    particle_index.append(atom_count)
-                    big_ind += 1
-                    #big_partition.append(int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size))
-                if int(line_list[1]) == 3:
-                    xy_small = np.asarray([float(i) for i in line_list[2:-1] ])
-                    xy_small += - box_size*(xy_small >= box_size) + box_size * (xy_small <= 0.)
-                    #get next line 
-                    line2 = next(f)
-                    atom_count += 1
-                    line_list2 = line2.split()
-                    xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
-                    xy_small_dir += -box_size*(xy_small_dir >= box_size) + box_size * (xy_small_dir <= 0.)
-                    #get orientation
-                    diff = xy_small_dir - xy_small
-                    pbc_diff = [i - float(int(i/(0.5*box_size)))*box_size for i in diff]
-                    pbc_diff = pbc_diff/(np.hypot(pbc_diff[0],pbc_diff[1]))#np.sqrt(np.sum(diff*diff)))
-                    pbin = int(xy_small[0]/(bin_size)) + bin_num*int(xy_small[1]/(bin_size))
-                    if(pbin > bin_num*bin_num):
-                        print(pbin, xy_small, 'huh')
-                    small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1]])
-                    particle_index.append(atom_count)
-                    small_ind += 1
+                if not "ITEM:" in line_list:
+                    atom_count = atom_count + 1
+                    if int(line_list[1]) == 5:
+                        #print(line_list)
+                        xy_big = np.asarray([float(i) for i in line_list[2:-1] ])
+                        #print(big_particle)
+                        xy_big += -box_size*(xy_big >= box_size) + box_size * (xy_big <= 0.)
+                        pbin = int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size)
+                        big_particle[pbin].append([ big_ind,xy_big[0],xy_big[1]])
+                        particle_index.append(atom_count)
+                        big_ind += 1
+                        #big_partition.append(int(xy_big[0]/bin_size) + bin_num*int(xy_big[1]/bin_size))
+                    if int(line_list[1]) == 3:
+                        xy_small = np.asarray([float(i) for i in line_list[2:-1] ])
+                        xy_small += - box_size*(xy_small >= box_size) + box_size * (xy_small <= 0.)
+                        #get next line 
+                        line2 = next(f)
+                        atom_count += 1
+                        line_list2 = line2.split()
+                        xy_small_dir = np.asarray([float(i) for i in line_list2[2:-1] ])
+                        xy_small_dir += -box_size*(xy_small_dir >= box_size) + box_size * (xy_small_dir <= 0.)
+                        #get orientation
+                        diff = xy_small_dir - xy_small
+                        pbc_diff = [i - float(int(i/(0.5*box_size)))*box_size for i in diff]
+                        pbc_diff = pbc_diff/(np.hypot(pbc_diff[0],pbc_diff[1]))#np.sqrt(np.sum(diff*diff)))
+                        pbin = int(xy_small[0]/(bin_size)) + bin_num*int(xy_small[1]/(bin_size))
+                        if(pbin > bin_num*bin_num):
+                            print(pbin, xy_small, 'huh')
+                        small_particle[pbin].append([ small_ind, xy_small[0], xy_small[1], pbc_diff[0], pbc_diff[1]])
+                        particle_index.append(atom_count)
+                        small_ind += 1
+                else:
+                    #incomplete_frame: either corrupt data, or end of file
+                    print('hi')
+                    data_flag = 0
+                    atom_count = 0
+                    big_particle = [[] for i in range(bin_num*bin_num)]
+                    small_particle = [[] for i in range(bin_num*bin_num)]
+                    small_ind = 0
+                    big_ind = 0
+                    particle_index = []
             if atom_count == number_of_atoms:
+                frame_count = frame_count + 1
+                frame_time_list.append(frame_time)
                 nbig = big_ind
                 nsmall = small_ind
                 data_flag = 0
@@ -150,7 +166,7 @@ for fname in flist:
                 # 
                 #analyze data here:
                 #distance matrix:
-                if not frame_count%20:
+                if not frame_count%50:
                     cmat = np.zeros((nsmall + nbig)*(nsmall + nbig)).reshape(nsmall + nbig, nsmall + nbig)
                     for box in range(bin_num*bin_num):
                         #print(big_particle[box])
@@ -218,6 +234,7 @@ for fname in flist:
                     #cluster is a list of lists where each sublist corresponds to a different cluster, and contains all the particles in that cluster with (big+small) index structure
                     #particle_cluster is an list where i[x] corresponds to the cluster i that contains particle with index x
                     p_in_cluster = np.zeros(nbig+nsmall).astype(int)
+                    csize = np.zeros(200).astype(int)
                     for idx,i in enumerate(cluster):
                         #print([particle_index[j]-1 for j in i])
                         for j in i:
@@ -230,25 +247,29 @@ for fname in flist:
                         else:
                             n_part_on_big.append(0)
                     save_size_dist.append(n_part_on_big)
-                    plt.hist(n_part_on_big)
-                    plt.show()
+                    out.write(str(frame_time_list[frame_count - 1]) + " ")
+                    for i in save_size_dist:
+                        out.write(str(i))
+                    out.write("\n")
+                    #plt.hist(n_part_on_big)
+                    #plt.show()
                     #print(n_part_on_big)
                     #print(p_in_cluster)
                     #print(next_list, cluster)
                     #DBSCAN(min_samples = 1).fit_predict(cmat)
-                    if frame_count == 20:
-                        #unbox particles:
-                        big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
-                        small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
-                        #                       print(np.asarray(big_plot), np.asarray(small_plot)[:,0:3])
-                        full_plot = np.vstack((np.asarray(big_plot), np.asarray(small_plot)[:,0:3]))
-                        #                        print(full_plot)
-                        palette = sns.color_palette('deep', np.unique(p_in_cluster).max() + 1) 
-                        colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in p_in_cluster]
-                        plt.scatter(np.asarray(full_plot).T[1], np.asarray(full_plot).T[2],c=colors)
-                        #plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
-                        plt.show()
-                        #sys.exit()
+                    #if frame_count == 20:
+                    #    #unbox particles:
+                    #    big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
+                    #    small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
+                    #    #                       print(np.asarray(big_plot), np.asarray(small_plot)[:,0:3])
+                    #    full_plot = np.vstack((np.asarray(big_plot), np.asarray(small_plot)[:,0:3]))
+                    #    #                        print(full_plot)
+                    #    palette = sns.color_palette('deep', np.unique(p_in_cluster).max() + 1) 
+                    #    colors = [palette[x] if x >= 0 else (0.0,0.0,0.0) for x in p_in_cluster]
+                    #    plt.scatter(np.asarray(full_plot).T[1], np.asarray(full_plot).T[2],c=colors)
+                    #    #plot_cluster(small_particle, cluster.DBSCAN, (), {'eps':5})
+                    #    plt.show()
+                    #    #sys.exit()
                 #
                 #
                 #
@@ -257,12 +278,10 @@ for fname in flist:
                 small_ind = 0
                 big_ind = 0
                 particle_index = []
+                save_size_dist = []
                 print(frame_count)
             #include this to skip first 9 non-data lines in each frame
             if "id" in line_list:
                 data_flag = 1
                 atom_count = 0
-                frame_count = frame_count + 1
-                #print(number_of_atoms)
-                #        print(data_list)
-        sys.exit()
+
