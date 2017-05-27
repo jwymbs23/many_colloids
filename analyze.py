@@ -20,7 +20,7 @@ data_list = []
 box_size = 0
 rcut_big2 = 1.1*(10*1.12246+1.1226)*(10*1.12246+1.1226)*0.25
 rcut_small2 = 1.1*1.12246*1.12246
-acut = np.cos(0.3*np.pi)
+acut = np.cos(0.2*np.pi)
 #print(flist)
 #sns.set_context('poster')
 #sns.set_color_codes()
@@ -137,7 +137,6 @@ for fname in flist:
             if atom_count == number_of_atoms:
                 nbig = big_ind
                 nsmall = small_ind
-                print(nbig,nsmall)
                 data_flag = 0
                 atom_count = 0
                 #                print(big_partition)
@@ -218,8 +217,12 @@ for fname in flist:
                     #cluster is a list of lists where each sublist corresponds to a different cluster, and contains all the particles in that cluster with (big+small) index structure
                     #particle_cluster is an list where i[x] corresponds to the cluster i that contains particle with index x
                     p_in_cluster = np.zeros(nbig+nsmall).astype(int)
+                    csize = np.zeros(200).astype(int)
                     for idx,i in enumerate(cluster):
-                        print([nbig + (j-nbig)*(j<nbig+1) + (j*4+1)*(j>=nbig) + 1 for j in i] )
+                        print(i, np.where(np.asarray(i)<200))
+#                        csize[i[np.where(np.asarray(i) < 200)]] = len(i)
+#                        print(csize,len(i))
+#                        print([nbig + (j-nbig)*(j<nbig+1) + (j*4+1)*(j>=nbig) + 1 for j in i] )
                         #sys.exit()
                         for j in i:
                             #print(i,idx,j)
@@ -227,7 +230,7 @@ for fname in flist:
 #                    print(p_in_cluster)
                     #print(next_list, cluster)
                     #DBSCAN(min_samples = 1).fit_predict(cmat)
-                    if frame_count == 100:
+                    if frame_count == 20:
                         #unbox particles:
                         big_plot = sorted(sum(big_particle, []), key = itemgetter(0))
                         small_plot = sorted(sum(small_particle, []), key = itemgetter(0))
