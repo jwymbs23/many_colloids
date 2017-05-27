@@ -6,9 +6,9 @@ from operator import itemgetter
 import pickle
 
 flist = []
-#for file in glob.glob("traj_rho_0.30_k_50.00_eps_0.00.lammpstrj"):#*.lammpstrj"):
-#    flist.append(file)
-flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
+for file in glob.glob("traj_n*.lammpstrj"):
+    flist.append(file)
+#flist = ["traj_n20_r0.20_k20.00_c5.00_200.lammpstrj"]
 #flist = ["20_frames.lammpstrj"]
 number_flag = 0
 number_of_atoms = 0
@@ -166,7 +166,7 @@ for fname in flist:
                 # 
                 #analyze data here:
                 #distance matrix:
-                if not frame_count%5:
+                if not frame_count%50:
                     cmat = np.zeros((nsmall + nbig)*(nsmall + nbig)).reshape(nsmall + nbig, nsmall + nbig)
                     for box in range(bin_num*bin_num):
                         #print(big_particle[box])
@@ -284,4 +284,4 @@ for fname in flist:
             if "id" in line_list:
                 data_flag = 1
                 atom_count = 0
-        sys.exit()
+
