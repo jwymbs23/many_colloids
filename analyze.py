@@ -100,10 +100,18 @@ for fname in flist:
     small_ind = 0
     big_ind = 0
     particle_index = []
+    frame_time_list = []
+    t_flag = 0
     with open(fname) as f:
         for line in f:
             #no_return = line.strip('\n')
             line_list = line.split()
+            if t_flag == 1:
+                frame_time = line_list[0]
+                t_flag = 0
+                print(frame_time)
+            if "TIMESTEP" in line_list:
+                t_flag = 1
             if data_flag == 1:
                 if not "ITEM:" in line_list:
                     atom_count = atom_count + 1
@@ -147,6 +155,9 @@ for fname in flist:
                     big_ind = 0
                     particle_index = []
             if atom_count == number_of_atoms:
+                frame_count = frame_count + 1
+                frame_time_list.append(frame_time)
+                print(frame_time_list)
                 nbig = big_ind
                 nsmall = small_ind
                 data_flag = 0
@@ -274,5 +285,4 @@ for fname in flist:
             if "id" in line_list:
                 data_flag = 1
                 atom_count = 0
-                frame_count = frame_count + 1
         sys.exit()
